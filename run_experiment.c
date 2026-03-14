@@ -120,6 +120,18 @@ int main(void)
             EVAL_UNSEEN_X, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
 
+        /* 最終試行: 入力・復元画像をプロット */
+        if (t == TRIALS - 1) {
+            run("gnuplot plot_study.pl");
+            printf("  -> X_study_images.eps を出力\n");
+            run("gnuplot plot_unseen.pl");
+            printf("  -> X_unseen_images.eps を出力\n");
+            run("gnuplot plot_y_study.pl");
+            printf("  -> y_study_images.eps を出力\n");
+            run("gnuplot plot_y_unseen.pl");
+            printf("  -> y_unseen_images.eps を出力\n");
+        }
+
         /* 未学習データの評価 */
         snprintf(cmd, sizeof(cmd),
             "echo '%d\n%d\n%d\n%s\n%s' | ./hierarchical_eval",
