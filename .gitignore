@@ -5,3 +5,4 @@ hierarchical_autoencoder
 hierarchical_datagen
 hierarchical_inference
 hierarchical_eval
+run_experiment
