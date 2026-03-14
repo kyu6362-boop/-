@@ -15,12 +15,14 @@ static double Y_out[MAX_SAMPLE * MAX_INPUT];
 int main(void)
 {
     char infile[256], yfile[256];
+    int trial;
 
     printf("画像の高さ: ");   scanf("%d", &ih);
     printf("画像の幅: ");     scanf("%d", &iw);
     printf("サンプル数: ");   scanf("%d", &num_samples);
     printf("入力データファイル (X): "); scanf("%s", infile);
     printf("出力データファイル (y): "); scanf("%s", yfile);
+    printf("試行番号 (1-): ");  scanf("%d", &trial);
 
     input_n = ih * iw;
 
@@ -134,19 +136,19 @@ int main(void)
     double avg_acc = (double)total_match / (num_samples * input_n) * 100.0;
     printf("平均 accuracy = %.2f%%\n\n", avg_acc);
 
-    /* 平均SSEをファイルに保存 */
-    fp = fopen("eval_sse.dat", "w");
+    /* 平均SSEをファイルに追記 */
+    fp = fopen("eval_sse.dat", "a");
     if (!fp) { fprintf(stderr, "Cannot open eval_sse.dat\n"); return 1; }
-    fprintf(fp, "%f\n", avg_sse);
+    fprintf(fp, "%d %f\n", trial, avg_sse);
     fclose(fp);
-    printf("eval_sse.dat saved\n");
+    printf("eval_sse.dat に追記 (trial %d)\n", trial);
 
-    /* 平均一致率をファイルに保存 */
-    fp = fopen("eval_accuracy.dat", "w");
+    /* 平均一致率をファイルに追記 */
+    fp = fopen("eval_accuracy.dat", "a");
     if (!fp) { fprintf(stderr, "Cannot open eval_accuracy.dat\n"); return 1; }
-    fprintf(fp, "%f\n", avg_acc);
+    fprintf(fp, "%d %f\n", trial, avg_acc);
     fclose(fp);
-    printf("eval_accuracy.dat saved\n");
+    printf("eval_accuracy.dat に追記 (trial %d)\n", trial);
 
     return 0;
 }
