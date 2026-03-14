@@ -20,12 +20,19 @@ set ylabel "z[1]"
 set size ratio 1
 set grid
 
-set palette defined (0 "royalblue", 12 "green", 24 "red")
-set cblabel "sample"
+group_size = 5  # グループあたりのサンプル数
 
 # z_idx=0 の行で x を取得、z_idx=1 の行で y を取得し、1行にまとめる
-plot "< awk 'NR%2==1{s=$1;x=$3} NR%2==0{print s,x,$3}' ".zfile \
-     using 2:3:1 with points pt 7 ps 1.5 palette notitle
+# 出力: sample x y group
+cmd = "< awk 'NR%2==1{s=$1;x=$3} NR%2==0{print s,x,$3,int(s/".sprintf("%d", group_size).")}' ".zfile
+
+set key outside right
+
+plot cmd using 2:3:(int($4)==0 ? 1 : 1/0) with points pt 7 ps 1.5 lc rgb "royalblue"  title "sample 0-4", \
+     cmd using 2:3:(int($4)==1 ? 1 : 1/0) with points pt 7 ps 1.5 lc rgb "forest-green" title "sample 5-9", \
+     cmd using 2:3:(int($4)==2 ? 1 : 1/0) with points pt 7 ps 1.5 lc rgb "red"         title "sample 10-14", \
+     cmd using 2:3:(int($4)==3 ? 1 : 1/0) with points pt 7 ps 1.5 lc rgb "orange"      title "sample 15-19", \
+     cmd using 2:3:(int($4)==4 ? 1 : 1/0) with points pt 7 ps 1.5 lc rgb "dark-violet" title "sample 20-24"
 
 set output
 print sprintf("saved: %s", outfile)
