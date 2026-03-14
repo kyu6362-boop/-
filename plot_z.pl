@@ -1,46 +1,31 @@
 # 潜在空間 z の2次元散布図
 #
+# hidden_n=2 の z データファイルを読み込み、
+# z[0] を x 座標、z[1] を y 座標として全サンプルを散布図にプロットする。
+#
 # 使い方:
 #   gnuplot plot_z.pl
-#
-# 事前に以下の変数を環境に合わせて変更してください。
 
 # --- 設定 ---
-zfile      = "256_64_z.dat"   # z データファイル (sample z_idx value)
-hidden_n   = 64               # 潜在空間の次元数
-num_samples = 25              # サンプル数
-outfile    = "z_scatter.png"  # 出力画像ファイル
-
-width = int(sqrt(hidden_n + 0.5))
-height = int(sqrt(hidden_n + 0.5))
+zfile   = "256_2_z.dat"    # z データファイル (sample z_idx value)
+outfile = "z_scatter.png"  # 出力画像ファイル
 
 # --- 出力設定 ---
-set terminal pngcairo size 1600,1200 font "Arial,10"
+set terminal pngcairo size 800,800 font "Arial,12"
 set output outfile
 
-set palette defined (0 "white", 0.5 "royalblue", 1 "red")
-set cbrange [0:1]
-set cblabel "z value"
+set title "Latent Space z  (".zfile.")" font ",14"
+set xlabel "z[0]"
+set ylabel "z[1]"
+set size ratio 1
+set grid
 
-cols = 5
-rows = int((num_samples + cols - 1) / cols)
+set palette defined (0 "royalblue", 12 "green", 24 "red")
+set cblabel "sample"
 
-set multiplot layout rows,cols title "Latent Space z  (".zfile.")" font ",14"
+# z_idx=0 の行で x を取得、z_idx=1 の行で y を取得し、1行にまとめる
+plot "< awk 'NR%2==1{s=$1;x=$3} NR%2==0{print s,x,$3}' ".zfile \
+     using 2:3:1 with points pt 7 ps 1.5 palette notitle
 
-do for [s=0:num_samples-1] {
-    set title sprintf("Sample %d", s) font ",10"
-    set xrange [-0.5:width-0.5]
-    set yrange [-0.5:height-0.5]
-    set xtics 0, 1
-    set ytics 0, 1
-    set size ratio 1
-    plot zfile using (int($1)==s ? int($2) % width : 1/0) \
-                    :(int($2) / width) \
-                    :3 \
-         with points pt 5 ps 1.5 palette notitle
-}
-
-unset multiplot
 set output
-
-print sprintf("saved: %s  (%d samples, %dx%d grid)", outfile, num_samples, width, height)
+print sprintf("saved: %s", outfile)
