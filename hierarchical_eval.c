@@ -134,13 +134,19 @@ int main(void)
     double avg_acc = (double)total_match / (num_samples * input_n) * 100.0;
     printf("平均 accuracy = %.2f%%\n\n", avg_acc);
 
-    /* 平均SSEと平均一致率をファイルに保存 */
-    fp = fopen("eval_result.dat", "w");
-    if (!fp) { fprintf(stderr, "Cannot open eval_result.dat\n"); return 1; }
-    fprintf(fp, "avg_SSE %f\n", avg_sse);
-    fprintf(fp, "avg_accuracy %f\n", avg_acc);
+    /* 平均SSEをファイルに保存 */
+    fp = fopen("eval_sse.dat", "w");
+    if (!fp) { fprintf(stderr, "Cannot open eval_sse.dat\n"); return 1; }
+    fprintf(fp, "%f\n", avg_sse);
     fclose(fp);
-    printf("eval_result.dat saved\n");
+    printf("eval_sse.dat saved\n");
+
+    /* 平均一致率をファイルに保存 */
+    fp = fopen("eval_accuracy.dat", "w");
+    if (!fp) { fprintf(stderr, "Cannot open eval_accuracy.dat\n"); return 1; }
+    fprintf(fp, "%f\n", avg_acc);
+    fclose(fp);
+    printf("eval_accuracy.dat saved\n");
 
     return 0;
 }
