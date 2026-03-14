@@ -97,10 +97,7 @@ int main(void)
     /* --- 評価 --- */
     char fname[256];
 
-    /* SSE per sample → eval_sse.dat */
-    fp = fopen("eval_sse.dat", "w");
-    if (!fp) { fprintf(stderr, "Cannot open eval_sse.dat\n"); return 1; }
-
+    /* SSE: 全サンプル平均 */
     double total_sse = 0.0;
     for (int s = 0; s < num_samples; s++) {
         double sse = 0.0;
@@ -108,13 +105,10 @@ int main(void)
             double d = Y_out[s * input_n + i] - X_in[s * input_n + i];
             sse += d * d;
         }
-        fprintf(fp, "%d %f\n", s, sse);
-        printf("sample %d  SSE = %f\n", s, sse);
         total_sse += sse;
     }
-    fclose(fp);
-    printf("\n平均 SSE = %f\n", total_sse / num_samples);
-    printf("eval_sse.dat saved\n\n");
+    double avg_sse = total_sse / num_samples;
+    printf("平均 SSE = %f\n", avg_sse);
 
     /* 閾値 0.5 で二値化した出力をサンプルごとに保存 */
     for (int s = 0; s < num_samples; s++) {
@@ -127,28 +121,26 @@ int main(void)
         }
         fclose(fp);
     }
-    printf("eval_bin_s{0-%d}.dat saved\n\n", num_samples - 1);
+    printf("eval_bin_s{0-%d}.dat saved\n", num_samples - 1);
 
-    /* 二値化後の一致率を計算 → eval_accuracy.dat */
-    fp = fopen("eval_accuracy.dat", "w");
-    if (!fp) { fprintf(stderr, "Cannot open eval_accuracy.dat\n"); return 1; }
-
-    double total_acc = 0.0;
-    for (int s = 0; s < num_samples; s++) {
-        int match = 0;
+    /* 二値化後の一致率: 全サンプル平均 */
+    int total_match = 0;
+    for (int s = 0; s < num_samples; s++)
         for (int i = 0; i < input_n; i++) {
             int bin_y = (Y_out[s * input_n + i] >= 0.5) ? 1 : 0;
             int bin_x = (X_in [s * input_n + i] >= 0.5) ? 1 : 0;
-            if (bin_y == bin_x) match++;
+            if (bin_y == bin_x) total_match++;
         }
-        double acc = (double)match / input_n * 100.0;
-        fprintf(fp, "%d %f\n", s, acc);
-        printf("sample %d  accuracy = %.2f%% (%d/%d)\n", s, acc, match, input_n);
-        total_acc += acc;
-    }
+    double avg_acc = (double)total_match / (num_samples * input_n) * 100.0;
+    printf("平均 accuracy = %.2f%%\n\n", avg_acc);
+
+    /* 平均SSEと平均一致率をファイルに保存 */
+    fp = fopen("eval_result.dat", "w");
+    if (!fp) { fprintf(stderr, "Cannot open eval_result.dat\n"); return 1; }
+    fprintf(fp, "avg_SSE %f\n", avg_sse);
+    fprintf(fp, "avg_accuracy %f\n", avg_acc);
     fclose(fp);
-    printf("\n平均 accuracy = %.2f%%\n", total_acc / num_samples);
-    printf("eval_accuracy.dat saved\n");
+    printf("eval_result.dat saved\n");
 
     return 0;
 }
