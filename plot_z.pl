@@ -8,10 +8,10 @@
 
 # --- 設定 ---
 zfile   = "256_2_z.dat"    # z データファイル (sample z_idx value)
-outfile = "z_scatter.png"  # 出力画像ファイル
+outfile = "z_scatter.eps"  # 出力画像ファイル
 
 # --- 出力設定 ---
-set terminal pngcairo size 800,800 font "Arial,12"
+set terminal postscript eps enhanced color font "Arial,16"
 set output outfile
 
 set title "Latent Space z  (".zfile.")" font ",14"
