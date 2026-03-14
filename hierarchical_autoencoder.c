@@ -31,16 +31,19 @@ static double dD2[MAX_HIDDEN * MAX_INPUT];
 static double Zn[sample * MAX_HIDDEN];
 static double Zy[sample * MAX_INPUT];
 
+/* Xavier初期化: 重みを [-limit, +limit] の一様乱数 (limit = sqrt(6/(fan_in+fan_out))) */
 static void random_WB(void)
 {
+    double limit = sqrt(6.0 / (double)(input_n + hidden_n));
+
     for(int i = 0; i < hidden_n; i++)
-        DB1[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
+        DB1[i] = 0.0;
     for(int i = 0; i < input_n; i++)
-        DB2[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
+        DB2[i] = 0.0;
     for(int i = 0; i < input_n * hidden_n; i++)
-        D1[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
+        D1[i] = limit * (2.0 * (double)rand()/RAND_MAX - 1.0);
     for(int i = 0; i < hidden_n * input_n; i++)
-        D2[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
+        D2[i] = limit * (2.0 * (double)rand()/RAND_MAX - 1.0);
 }
 
 static void flatten_1(int n)
