@@ -29,18 +29,26 @@ static int run(const char *cmd)
     return ret;
 }
 
+static double read_value(const char *path)
+{
+    FILE *fp = fopen(path, "r");
+    if (!fp) { fprintf(stderr, "Cannot open %s\n", path); return 0.0; }
+    double v = 0.0;
+    fscanf(fp, "%lf", &v);
+    fclose(fp);
+    return v;
+}
+
 int main(void)
 {
     char cmd[1024];
-
-    /* 前回の結果をクリア */
-    remove("eval_sse.dat");
-    remove("eval_accuracy.dat");
+    double sse_list[TRIALS];
+    double acc_list[TRIALS];
 
     printf("=== 実験開始: %d 回繰り返し ===\n\n", TRIALS);
 
-    for (int t = 1; t <= TRIALS; t++) {
-        printf("===== Trial %d / %d =====\n", t, TRIALS);
+    for (int t = 0; t < TRIALS; t++) {
+        printf("===== Trial %d / %d =====\n", t + 1, TRIALS);
 
         /* データ生成 */
         snprintf(cmd, sizeof(cmd),
@@ -62,16 +70,55 @@ int main(void)
 
         /* 評価 */
         snprintf(cmd, sizeof(cmd),
-            "echo '%d\n%d\n%d\n%s\n%s\n%d' | ./hierarchical_eval",
-            IMG_H, IMG_W, NUM_SAMPLES, EVAL_INPUT, EVAL_Y, t);
+            "echo '%d\n%d\n%d\n%s\n%s' | ./hierarchical_eval",
+            IMG_H, IMG_W, NUM_SAMPLES, EVAL_INPUT, EVAL_Y);
         if (run(cmd)) return 1;
 
-        printf("\n");
+        /* 結果を読み取り */
+        sse_list[t] = read_value("eval_sse.dat");
+        acc_list[t] = read_value("eval_accuracy.dat");
+        printf("  -> SSE = %f, accuracy = %.2f%%\n\n", sse_list[t], acc_list[t]);
     }
 
+    /* 各試行の値を保存 */
+    FILE *fp;
+
+    fp = fopen("eval_sse.dat", "w");
+    if (!fp) { fprintf(stderr, "Cannot open eval_sse.dat\n"); return 1; }
+    for (int t = 0; t < TRIALS; t++)
+        fprintf(fp, "%d %f\n", t + 1, sse_list[t]);
+    fclose(fp);
+
+    fp = fopen("eval_accuracy.dat", "w");
+    if (!fp) { fprintf(stderr, "Cannot open eval_accuracy.dat\n"); return 1; }
+    for (int t = 0; t < TRIALS; t++)
+        fprintf(fp, "%d %f\n", t + 1, acc_list[t]);
+    fclose(fp);
+
+    /* 平均を計算して保存 */
+    double sum_sse = 0.0, sum_acc = 0.0;
+    for (int t = 0; t < TRIALS; t++) {
+        sum_sse += sse_list[t];
+        sum_acc += acc_list[t];
+    }
+    double avg_sse = sum_sse / TRIALS;
+    double avg_acc = sum_acc / TRIALS;
+
+    fp = fopen("eval_sse_avg.dat", "w");
+    if (!fp) { fprintf(stderr, "Cannot open eval_sse_avg.dat\n"); return 1; }
+    fprintf(fp, "%f\n", avg_sse);
+    fclose(fp);
+
+    fp = fopen("eval_accuracy_avg.dat", "w");
+    if (!fp) { fprintf(stderr, "Cannot open eval_accuracy_avg.dat\n"); return 1; }
+    fprintf(fp, "%f\n", avg_acc);
+    fclose(fp);
+
     printf("=== 実験完了 ===\n");
-    printf("eval_sse.dat      : 各試行の平均SSE\n");
-    printf("eval_accuracy.dat : 各試行の平均一致率(%%)\n");
+    printf("eval_sse.dat          : 各試行のSSE (trial value)\n");
+    printf("eval_accuracy.dat     : 各試行の一致率 (trial value)\n");
+    printf("eval_sse_avg.dat      : %d回平均SSE = %f\n", TRIALS, avg_sse);
+    printf("eval_accuracy_avg.dat : %d回平均一致率 = %.2f%%\n", TRIALS, avg_acc);
 
     return 0;
 }
