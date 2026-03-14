@@ -86,11 +86,23 @@ int main(void)
             INPUT_FILE, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
 
+        /* 最終試行: 事前学習後の潜在空間をプロット */
+        if (t == TRIALS - 1) {
+            run("gnuplot -e \"zfile='64_2_z.dat'; outfile='z_scatter_pretrain.eps'\" plot_z.pl");
+            printf("  -> z_scatter_pretrain.eps を出力\n");
+        }
+
         /* 学習データで推論 (プレフィックス: study) */
         snprintf(cmd, sizeof(cmd),
             "echo '%s\nstudy\n%d\n%d\n%s' | ./hierarchical_inference",
             EVAL_STUDY_X, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
+
+        /* 最終試行: 推論後の潜在空間をプロット */
+        if (t == TRIALS - 1) {
+            run("gnuplot -e \"zfile='study_64_2_z.dat'; outfile='z_scatter_inference.eps'\" plot_z.pl");
+            printf("  -> z_scatter_inference.eps を出力\n");
+        }
 
         /* 学習データの評価 */
         snprintf(cmd, sizeof(cmd),
