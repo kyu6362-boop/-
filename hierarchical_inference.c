@@ -13,6 +13,7 @@
 static int input_n;
 static int hidden_n;
 static int sample_n;
+static char prefix[256];
 
 /* 固定サイズグローバル配列 */
 static double X_data[MAX_SAMPLE * MAX_INPUT];
@@ -117,14 +118,14 @@ static void save_stage_results(void)
             Zy[n * input_n + j] = y[j];
     }
 
-    snprintf(fname, sizeof(fname), "%d_%d_z.dat", input_n, hidden_n);
+    snprintf(fname, sizeof(fname), "%s_%d_%d_z.dat", prefix, input_n, hidden_n);
     fp = fopen(fname, "w");
     for(int s = 0; s < sample_n; s++)
         for(int j = 0; j < hidden_n; j++)
             fprintf(fp, "%d %d %f\n", s, j, Zn[s * hidden_n + j]);
     fclose(fp);
 
-    snprintf(fname, sizeof(fname), "%d_%d_y.dat", input_n, hidden_n);
+    snprintf(fname, sizeof(fname), "%s_%d_%d_y.dat", prefix, input_n, hidden_n);
     fp = fopen(fname, "w");
     for(int s = 0; s < sample_n; s++)
         for(int j = 0; j < input_n; j++)
@@ -136,7 +137,7 @@ static void save_stage_results(void)
 
     for(int s = 0; s < sample_n; s++){
         /* z: 潜在空間 */
-        snprintf(fname, sizeof(fname), "%d_%d_z_s%d.dat", input_n, hidden_n, s);
+        snprintf(fname, sizeof(fname), "%s_%d_%d_z_s%d.dat", prefix, input_n, hidden_n, s);
         fp = fopen(fname, "w");
         if(fp){
             for(int j = 0; j < hidden_n; j++)
@@ -144,7 +145,7 @@ static void save_stage_results(void)
             fclose(fp);
         }
         /* y: 出力（2D reshape） */
-        snprintf(fname, sizeof(fname), "%d_%d_y_s%d.dat", input_n, hidden_n, s);
+        snprintf(fname, sizeof(fname), "%s_%d_%d_y_s%d.dat", prefix, input_n, hidden_n, s);
         fp = fopen(fname, "w");
         if(fp){
             for(int j = 0; j < input_n; j++)
@@ -163,6 +164,8 @@ int main(void)
 
     printf("入力ファイル名: ");
     scanf("%s", infile);
+    printf("出力プレフィックス: ");
+    scanf("%s", prefix);
     printf("サンプル数: ");
     scanf("%d", &sample_n);
     if(sample_n > MAX_SAMPLE){

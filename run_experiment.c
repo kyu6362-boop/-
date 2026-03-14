@@ -19,9 +19,8 @@
 /* 評価パラメータ */
 #define EVAL_STUDY_X  "X_study.dat"
 #define EVAL_UNSEEN_X "X_unseen.dat"
-#define EVAL_Y        "256_64_y.dat"
-#define EVAL_Y_STUDY  "256_64_y_study.dat"
-#define EVAL_Y_UNSEEN "256_64_y_unseen.dat"
+#define EVAL_Y_STUDY  "study_256_64_y.dat"
+#define EVAL_Y_UNSEEN "unseen_256_64_y.dat"
 #define NUM_SAMPLES   25
 
 static int run(const char *cmd)
@@ -87,40 +86,32 @@ int main(void)
             INPUT_FILE, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
 
-        /* 学習データで推論 */
+        /* 学習データで推論 (プレフィックス: study) */
         snprintf(cmd, sizeof(cmd),
-            "echo '%s\n%d\n%d\n%s' | ./hierarchical_inference",
+            "echo '%s\nstudy\n%d\n%d\n%s' | ./hierarchical_inference",
             EVAL_STUDY_X, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
-
-        /* 学習データのyファイルを退避 */
-        snprintf(cmd, sizeof(cmd), "cp %s %s", EVAL_Y, EVAL_Y_STUDY);
-        run(cmd);
 
         /* 学習データの評価 */
         snprintf(cmd, sizeof(cmd),
             "echo '%d\n%d\n%d\n%s\n%s' | ./hierarchical_eval",
-            IMG_H, IMG_W, NUM_SAMPLES, EVAL_STUDY_X, EVAL_Y);
+            IMG_H, IMG_W, NUM_SAMPLES, EVAL_STUDY_X, EVAL_Y_STUDY);
         if (run(cmd)) return 1;
 
         study_sse[t] = read_value("eval_sse.dat");
         study_acc[t] = read_value("eval_accuracy.dat");
         printf("  [学習]   SSE = %f, accuracy = %.2f%%\n", study_sse[t], study_acc[t]);
 
-        /* 未学習データで推論 */
+        /* 未学習データで推論 (プレフィックス: unseen) */
         snprintf(cmd, sizeof(cmd),
-            "echo '%s\n%d\n%d\n%s' | ./hierarchical_inference",
+            "echo '%s\nunseen\n%d\n%d\n%s' | ./hierarchical_inference",
             EVAL_UNSEEN_X, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
-
-        /* 未学習データのyファイルを退避 */
-        snprintf(cmd, sizeof(cmd), "cp %s %s", EVAL_Y, EVAL_Y_UNSEEN);
-        run(cmd);
 
         /* 未学習データの評価 */
         snprintf(cmd, sizeof(cmd),
             "echo '%d\n%d\n%d\n%s\n%s' | ./hierarchical_eval",
-            IMG_H, IMG_W, NUM_SAMPLES, EVAL_UNSEEN_X, EVAL_Y);
+            IMG_H, IMG_W, NUM_SAMPLES, EVAL_UNSEEN_X, EVAL_Y_UNSEEN);
         if (run(cmd)) return 1;
 
         unseen_sse[t] = read_value("eval_sse.dat");
@@ -144,8 +135,8 @@ int main(void)
     printf("eval_study_sse.dat  / eval_study_acc.dat  : 学習データ各試行\n");
     printf("eval_unseen_sse.dat / eval_unseen_acc.dat : 未学習データ各試行\n");
     printf("*_avg.dat : それぞれの%d回平均\n", TRIALS);
-    printf("256_64_y_study.dat  : 最終試行の学習データ復元結果\n");
-    printf("256_64_y_unseen.dat : 最終試行の未学習データ復元結果\n");
+    printf("study_256_64_y.dat  : 最終試行の学習データ復元結果\n");
+    printf("unseen_256_64_y.dat : 最終試行の未学習データ復元結果\n");
 
     return 0;
 }

@@ -7,7 +7,7 @@
 #   gnuplot plot_z.pl
 
 # --- 設定 ---
-zfile   = "64_2_z.dat"     # z データファイル (sample z_idx value)
+zfile   = "study_64_2_z.dat"  # z データファイル (sample z_idx value)
 outfile = "z_scatter.eps"  # 出力画像ファイル
 
 # --- 出力設定 ---

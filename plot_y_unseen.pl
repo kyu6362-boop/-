@@ -4,7 +4,7 @@
 #   gnuplot plot_y_unseen.pl
 
 # --- 設定 ---
-yfile       = "256_64_y_unseen.dat"  # 未学習データの出力yファイル (s idx value)
+yfile       = "unseen_256_64_y.dat"  # 未学習データの出力yファイル (s idx value)
 input_n     = 256   # 入力層サイズ
 hidden_n    = 64    # 中間層サイズ
 num_samples = 25    # サンプル数
