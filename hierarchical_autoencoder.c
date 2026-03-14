@@ -99,13 +99,9 @@ static void grad_output(void)
         dy_g[i]      = y[i] * (1.0 - y[i]);
         dL_output[i] = dL[i] * dy_g[i];
     }
-    for(int i = 0; i < input_n; i++){
-        for(int j = 0; j < hidden_n; j++){
+    for(int i = 0; i < input_n; i++)
+        for(int j = 0; j < hidden_n; j++)
             dD2[j * input_n + i] = z[j] * dL_output[i];
-            D2[j * input_n + i] -= R * dD2[j * input_n + i];
-        }
-        DB2[i] -= R * dL_output[i];
-    }
 }
 
 static void grad_hidden(void)
@@ -124,11 +120,19 @@ static void grad_hidden(void)
     for(int i = 0; i < input_n; i++)
         for(int j = 0; j < hidden_n; j++)
             dD1[i * hidden_n + j] += F1[i] * dL_hidden[j];
-    for(int i = 0; i < hidden_n; i++){
-        for(int j = 0; j < input_n; j++)
-            D1[j * hidden_n + i] -= R * dD1[j * hidden_n + i];
-        DB1[i] -= R * dL_hidden[i];
+}
+
+static void update_weights(void)
+{
+    for(int i = 0; i < input_n; i++){
+        for(int j = 0; j < hidden_n; j++){
+            D2[j * input_n + i] -= R * dD2[j * input_n + i];
+            D1[i * hidden_n + j] -= R * dD1[i * hidden_n + j];
+        }
+        DB2[i] -= R * dL_output[i];
     }
+    for(int i = 0; i < hidden_n; i++)
+        DB1[i] -= R * dL_hidden[i];
 }
 
 static void train_autoencoder(void)
@@ -143,6 +147,7 @@ static void train_autoencoder(void)
             loss_sum += sum_of_squared_error();
             grad_output();
             grad_hidden();
+            update_weights();
         }
         loss_sum /= (double)sample;
         epoch++;
