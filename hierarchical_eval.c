@@ -127,7 +127,28 @@ int main(void)
         }
         fclose(fp);
     }
-    printf("eval_bin_s{0-%d}.dat saved\n", num_samples - 1);
+    printf("eval_bin_s{0-%d}.dat saved\n\n", num_samples - 1);
+
+    /* 二値化後の一致率を計算 → eval_accuracy.dat */
+    fp = fopen("eval_accuracy.dat", "w");
+    if (!fp) { fprintf(stderr, "Cannot open eval_accuracy.dat\n"); return 1; }
+
+    double total_acc = 0.0;
+    for (int s = 0; s < num_samples; s++) {
+        int match = 0;
+        for (int i = 0; i < input_n; i++) {
+            int bin_y = (Y_out[s * input_n + i] >= 0.5) ? 1 : 0;
+            int bin_x = (X_in [s * input_n + i] >= 0.5) ? 1 : 0;
+            if (bin_y == bin_x) match++;
+        }
+        double acc = (double)match / input_n * 100.0;
+        fprintf(fp, "%d %f\n", s, acc);
+        printf("sample %d  accuracy = %.2f%% (%d/%d)\n", s, acc, match, input_n);
+        total_acc += acc;
+    }
+    fclose(fp);
+    printf("\n平均 accuracy = %.2f%%\n", total_acc / num_samples);
+    printf("eval_accuracy.dat saved\n");
 
     return 0;
 }
