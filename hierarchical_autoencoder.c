@@ -4,18 +4,12 @@
 #include <time.h>
 #include <math.h>
 
-#define R          0.001
+#define R          0.01
 #define LOSS_LIMIT 0.01
 #define sample     25
 #define MAX_INPUT  4096
 #define MAX_HIDDEN 1024
 #define MAX_LAYERS 10
-
-/* Adam ハイパーパラメータ */
-#define BETA1   0.9
-#define BETA2   0.999
-#define EPSILON 1e-8
-#define WD      1e-4    /* weight decay */
 
 /* ランタイムで設定される実際のサイズ */
 static int input_n;
@@ -37,44 +31,16 @@ static double dD2[MAX_HIDDEN * MAX_INPUT];
 static double Zn[sample * MAX_HIDDEN];
 static double Zy[sample * MAX_INPUT];
 
-/* Adam 状態変数 (m: 1次モーメント, v: 2次モーメント) */
-static double mD1[MAX_INPUT * MAX_HIDDEN], vD1[MAX_INPUT * MAX_HIDDEN];
-static double mD2[MAX_HIDDEN * MAX_INPUT], vD2[MAX_HIDDEN * MAX_INPUT];
-static double mDB1[MAX_HIDDEN], vDB1[MAX_HIDDEN];
-static double mDB2[MAX_INPUT],  vDB2[MAX_INPUT];
-static int adam_t;
-
-static void clear_adam_state(void)
+static void random_WB(void)
 {
-    adam_t = 0;
-    for(int i = 0; i < input_n * hidden_n; i++){
-        mD1[i] = 0.0;  vD1[i] = 0.0;
-    }
-    for(int i = 0; i < hidden_n * input_n; i++){
-        mD2[i] = 0.0;  vD2[i] = 0.0;
-    }
-    for(int i = 0; i < hidden_n; i++){
-        mDB1[i] = 0.0; vDB1[i] = 0.0;
-    }
-    for(int i = 0; i < input_n; i++){
-        mDB2[i] = 0.0; vDB2[i] = 0.0;
-    }
-}
-
-/* Xavier初期化: 重みを sqrt(6 / (fan_in + fan_out)) の範囲で一様乱数 */
-static void xavier_init_WB(void)
-{
-    double limit1 = sqrt(6.0 / (double)(input_n + hidden_n));
-    double limit2 = sqrt(6.0 / (double)(hidden_n + input_n));
-
     for(int i = 0; i < hidden_n; i++)
-        DB1[i] = 0.0;
+        DB1[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
     for(int i = 0; i < input_n; i++)
-        DB2[i] = 0.0;
+        DB2[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
     for(int i = 0; i < input_n * hidden_n; i++)
-        D1[i] = limit1 * (2.0 * (double)rand()/RAND_MAX - 1.0);
+        D1[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
     for(int i = 0; i < hidden_n * input_n; i++)
-        D2[i] = limit2 * (2.0 * (double)rand()/RAND_MAX - 1.0);
+        D2[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
 }
 
 static void flatten_1(int n)
@@ -130,10 +96,13 @@ static void grad_output(void)
         dy_g[i]      = y[i] * (1.0 - y[i]);
         dL_output[i] = dL[i] * dy_g[i];
     }
-    for(int i = 0; i < input_n; i++)
-        for(int j = 0; j < hidden_n; j++)
+    for(int i = 0; i < input_n; i++){
+        for(int j = 0; j < hidden_n; j++){
             dD2[j * input_n + i] = z[j] * dL_output[i];
-    /* dL_output[i] がDB2[i]の勾配 */
+            D2[j * input_n + i] -= R * dD2[j * input_n + i];
+        }
+        DB2[i] -= R * dL_output[i];
+    }
 }
 
 static void grad_hidden(void)
@@ -152,51 +121,10 @@ static void grad_hidden(void)
     for(int i = 0; i < input_n; i++)
         for(int j = 0; j < hidden_n; j++)
             dD1[i * hidden_n + j] += F1[i] * dL_hidden[j];
-    /* dL_hidden[i] がDB1[i]の勾配 */
-}
-
-/* AdamW: 重みにweight decay、バイアスにはweight decayなし */
-static void adam_update(void)
-{
-    adam_t++;
-    double bc1 = 1.0 - pow(BETA1, adam_t);
-    double bc2 = 1.0 - pow(BETA2, adam_t);
-
-    /* D1 (weight decay あり) */
-    for(int i = 0; i < input_n * hidden_n; i++){
-        double g = dD1[i];
-        mD1[i] = BETA1 * mD1[i] + (1.0 - BETA1) * g;
-        vD1[i] = BETA2 * vD1[i] + (1.0 - BETA2) * g * g;
-        double mh = mD1[i] / bc1;
-        double vh = vD1[i] / bc2;
-        D1[i] -= R * (mh / (sqrt(vh) + EPSILON) + WD * D1[i]);
-    }
-    /* D2 (weight decay あり) */
-    for(int i = 0; i < hidden_n * input_n; i++){
-        double g = dD2[i];
-        mD2[i] = BETA1 * mD2[i] + (1.0 - BETA1) * g;
-        vD2[i] = BETA2 * vD2[i] + (1.0 - BETA2) * g * g;
-        double mh = mD2[i] / bc1;
-        double vh = vD2[i] / bc2;
-        D2[i] -= R * (mh / (sqrt(vh) + EPSILON) + WD * D2[i]);
-    }
-    /* DB1 (weight decay なし) */
     for(int i = 0; i < hidden_n; i++){
-        double g = dL_hidden[i];
-        mDB1[i] = BETA1 * mDB1[i] + (1.0 - BETA1) * g;
-        vDB1[i] = BETA2 * vDB1[i] + (1.0 - BETA2) * g * g;
-        double mh = mDB1[i] / bc1;
-        double vh = vDB1[i] / bc2;
-        DB1[i] -= R * mh / (sqrt(vh) + EPSILON);
-    }
-    /* DB2 (weight decay なし) */
-    for(int i = 0; i < input_n; i++){
-        double g = dL_output[i];
-        mDB2[i] = BETA1 * mDB2[i] + (1.0 - BETA1) * g;
-        vDB2[i] = BETA2 * vDB2[i] + (1.0 - BETA2) * g * g;
-        double mh = mDB2[i] / bc1;
-        double vh = vDB2[i] / bc2;
-        DB2[i] -= R * mh / (sqrt(vh) + EPSILON);
+        for(int j = 0; j < input_n; j++)
+            D1[j * hidden_n + i] -= R * dD1[j * hidden_n + i];
+        DB1[i] -= R * dL_hidden[i];
     }
 }
 
@@ -212,7 +140,6 @@ static void train_autoencoder(void)
             loss_sum += sum_of_squared_error();
             grad_output();
             grad_hidden();
-            adam_update();
         }
         loss_sum /= (double)sample;
         epoch++;
@@ -350,8 +277,7 @@ int main(void)
 
         printf("\n--- Stage %d: %d -> %d ---\n", stage + 1, input_n, hidden_n);
 
-        xavier_init_WB();
-        clear_adam_state();
+        random_WB();
         train_autoencoder();
         save_stage_results();
 
