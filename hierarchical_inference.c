@@ -132,16 +132,14 @@ static void save_stage_results(void)
 
     /* サンプルごとの個別ファイル */
     int y_width = (int)round(sqrt((double)input_n));
-    int z_width = (int)round(sqrt((double)hidden_n));
 
     for(int s = 0; s < sample; s++){
-        /* z: 潜在空間（2D reshape） */
+        /* z: 潜在空間 */
         snprintf(fname, sizeof(fname), "%d_%d_z_s%d.dat", input_n, hidden_n, s);
         fp = fopen(fname, "w");
         if(fp){
             for(int j = 0; j < hidden_n; j++)
-                fprintf(fp, "%d %d %f\n",
-                        j % z_width, j / z_width, Zn[s * hidden_n + j]);
+                fprintf(fp, "%d %f\n", j, Zn[s * hidden_n + j]);
             fclose(fp);
         }
         /* y: 出力（2D reshape） */
