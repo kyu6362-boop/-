@@ -5,7 +5,7 @@
 #include <math.h>
 
 #define R          0.01
-#define loop       10000
+#define LOSS_LIMIT 0.01
 #define sample     25
 #define MAX_INPUT  4096
 #define MAX_HIDDEN 1024
@@ -28,12 +28,8 @@ static double dL[MAX_INPUT], dy_g[MAX_INPUT], dL_output[MAX_INPUT];
 static double dz[MAX_HIDDEN], dL_hidden[MAX_HIDDEN];
 static double dD1[MAX_INPUT * MAX_HIDDEN];
 static double dD2[MAX_HIDDEN * MAX_INPUT];
-static double FA[MAX_INPUT], yA[MAX_INPUT];
 static double Zn[sample * MAX_HIDDEN];
 static double Zy[sample * MAX_INPUT];
-
-static double loss_log[loop];
-static double count_log[loop];
 
 static void clear_arrays(void)
 {
@@ -46,16 +42,20 @@ static void clear_arrays(void)
     memset(Zy, 0, sizeof(Zy));
 }
 
-static void random_WB(void)
+/* Xavier初期化: 重みを sqrt(6 / (fan_in + fan_out)) の範囲で一様乱数 */
+static void xavier_init_WB(void)
 {
+    double limit1 = sqrt(6.0 / (double)(input_n + hidden_n));
+    double limit2 = sqrt(6.0 / (double)(hidden_n + input_n));
+
     for(int i = 0; i < hidden_n; i++)
-        DB1[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
+        DB1[i] = 0.0;
     for(int i = 0; i < input_n; i++)
-        DB2[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
+        DB2[i] = 0.0;
     for(int i = 0; i < input_n * hidden_n; i++)
-        D1[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
+        D1[i] = limit1 * (2.0 * (double)rand()/RAND_MAX - 1.0);
     for(int i = 0; i < hidden_n * input_n; i++)
-        D2[i] = 0.1 * ((double)rand()/RAND_MAX - 0.5);
+        D2[i] = limit2 * (2.0 * (double)rand()/RAND_MAX - 1.0);
 }
 
 static void flatten_1(int n)
@@ -104,30 +104,6 @@ static double sum_of_squared_error(void)
     return loss / (double)input_n;
 }
 
-static double count1(void)
-{
-    double max = F1[0], min = F1[0];
-    for(int i = 0; i < input_n; i++){
-        if(F1[i] > max) max = F1[i];
-        if(F1[i] < min) min = F1[i];
-    }
-    for(int i = 0; i < input_n; i++)
-        FA[i] = (F1[i] > 0.5 * (max + min)) ? 1.0 : 0.0;
-
-    double max1 = y[0], min1 = y[0];
-    for(int i = 0; i < input_n; i++){
-        if(y[i] > max1) max1 = y[i];
-        if(y[i] < min1) min1 = y[i];
-    }
-    for(int i = 0; i < input_n; i++)
-        yA[i] = (y[i] > 0.5 * (max1 + min1)) ? 1.0 : 0.0;
-
-    double count = 0.0;
-    for(int i = 0; i < input_n; i++)
-        if(yA[i] == FA[i]) count += 1.0;
-    return count / (double)input_n;
-}
-
 static void grad_output(void)
 {
     for(int i = 0; i < input_n; i++){
@@ -169,25 +145,23 @@ static void grad_hidden(void)
 
 static void train_autoencoder(void)
 {
-    for(int epoch = 0; epoch < loop; epoch++){
-        double loss_sum = 0.0, count_sum = 0.0;
+    int epoch = 0;
+    double loss_sum;
+    do {
+        loss_sum = 0.0;
         for(int n = 0; n < sample; n++){
             flatten_1(n);
             dense_forward();
-            loss_sum  += sum_of_squared_error();
-            count_sum += count1();
+            loss_sum += sum_of_squared_error();
             grad_output();
             grad_hidden();
         }
-        loss_sum  /= (double)sample;
-        count_sum /= (double)sample;
-        loss_log[epoch]  = loss_sum;
-        count_log[epoch] = count_sum;
-        if((epoch + 1) % 100 == 0){
-            printf("LOSS %lf\n",  loss_sum);
-            printf("COUNT %lf\n", count_sum);
-        }
-    }
+        loss_sum /= (double)sample;
+        epoch++;
+        if(epoch % 100 == 0)
+            printf("Epoch %d  LOSS %lf\n", epoch, loss_sum);
+    } while(loss_sum > LOSS_LIMIT);
+    printf("収束: Epoch %d  LOSS %lf\n", epoch, loss_sum);
 }
 
 static void save_stage_results(void)
@@ -319,7 +293,7 @@ int main(void)
 
         printf("\n--- Stage %d: %d -> %d ---\n", stage + 1, input_n, hidden_n);
 
-        random_WB();
+        xavier_init_WB();
         train_autoencoder();
         save_stage_results();
 
