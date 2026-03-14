@@ -20,6 +20,8 @@
 #define EVAL_STUDY_X  "X_study.dat"
 #define EVAL_UNSEEN_X "X_unseen.dat"
 #define EVAL_Y        "256_64_y.dat"
+#define EVAL_Y_STUDY  "256_64_y_study.dat"
+#define EVAL_Y_UNSEEN "256_64_y_unseen.dat"
 #define NUM_SAMPLES   25
 
 static int run(const char *cmd)
@@ -65,28 +67,35 @@ int main(void)
     double study_sse[TRIALS],  study_acc[TRIALS];
     double unseen_sse[TRIALS], unseen_acc[TRIALS];
 
-    printf("=== 実験開始: %d 回繰り返し ===\n\n", TRIALS);
+    printf("=== データ生成 ===\n");
+
+    /* データ生成（1回だけ、ループ外で固定） */
+    snprintf(cmd, sizeof(cmd),
+        "echo '%d\n%d\n%d\n%d\n%d\n%d' | ./hierarchical_datagen",
+        IMG_H, IMG_W, CHANNELS, BASE_PATTERNS, VARIATIONS, BLOCKS);
+    if (run(cmd)) return 1;
+
+    printf("\n=== 実験開始: %d 回繰り返し（データ固定・初期値のみ変更） ===\n\n",
+           TRIALS);
 
     for (int t = 0; t < TRIALS; t++) {
         printf("===== Trial %d / %d =====\n", t + 1, TRIALS);
 
-        /* データ生成 */
+        /* 事前学習（毎回ランダム初期値で再学習） */
         snprintf(cmd, sizeof(cmd),
-            "echo '%d\n%d\n%d\n%d\n%d\n%d' | ./hierarchical_datagen",
-            IMG_H, IMG_W, CHANNELS, BASE_PATTERNS, VARIATIONS, BLOCKS);
-        if (run(cmd)) return 1;
-
-        /* 事前学習 */
-        snprintf(cmd, sizeof(cmd),
-            "echo '%s\n%d\n%s' | ./hierarchical_autoencoder",
-            INPUT_FILE, NUM_LAYERS, LAYER_SIZES);
+            "echo '%s\n%d\n%d\n%s' | ./hierarchical_autoencoder",
+            INPUT_FILE, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
 
         /* 学習データで推論 */
         snprintf(cmd, sizeof(cmd),
-            "echo '%s\n%d\n%s' | ./hierarchical_inference",
-            EVAL_STUDY_X, NUM_LAYERS, LAYER_SIZES);
+            "echo '%s\n%d\n%d\n%s' | ./hierarchical_inference",
+            EVAL_STUDY_X, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
+
+        /* 学習データのyファイルを退避 */
+        snprintf(cmd, sizeof(cmd), "cp %s %s", EVAL_Y, EVAL_Y_STUDY);
+        run(cmd);
 
         /* 学習データの評価 */
         snprintf(cmd, sizeof(cmd),
@@ -100,9 +109,13 @@ int main(void)
 
         /* 未学習データで推論 */
         snprintf(cmd, sizeof(cmd),
-            "echo '%s\n%d\n%s' | ./hierarchical_inference",
-            EVAL_UNSEEN_X, NUM_LAYERS, LAYER_SIZES);
+            "echo '%s\n%d\n%d\n%s' | ./hierarchical_inference",
+            EVAL_UNSEEN_X, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
+
+        /* 未学習データのyファイルを退避 */
+        snprintf(cmd, sizeof(cmd), "cp %s %s", EVAL_Y, EVAL_Y_UNSEEN);
+        run(cmd);
 
         /* 未学習データの評価 */
         snprintf(cmd, sizeof(cmd),
@@ -131,6 +144,8 @@ int main(void)
     printf("eval_study_sse.dat  / eval_study_acc.dat  : 学習データ各試行\n");
     printf("eval_unseen_sse.dat / eval_unseen_acc.dat : 未学習データ各試行\n");
     printf("*_avg.dat : それぞれの%d回平均\n", TRIALS);
+    printf("256_64_y_study.dat  : 最終試行の学習データ復元結果\n");
+    printf("256_64_y_unseen.dat : 最終試行の未学習データ復元結果\n");
 
     return 0;
 }

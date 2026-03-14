@@ -4,7 +4,7 @@
 #include <time.h>
 #include <math.h>
 
-#define sample     25
+#define MAX_SAMPLE 50
 #define MAX_INPUT  4096
 #define MAX_HIDDEN 1024
 #define MAX_LAYERS 10
@@ -12,9 +12,10 @@
 /* ランタイムで設定される実際のサイズ */
 static int input_n;
 static int hidden_n;
+static int sample_n;
 
 /* 固定サイズグローバル配列 */
-static double X_data[sample * MAX_INPUT];
+static double X_data[MAX_SAMPLE * MAX_INPUT];
 static double F1[MAX_INPUT], F2[MAX_INPUT];
 static double EF[MAX_HIDDEN], z[MAX_HIDDEN];
 static double y[MAX_INPUT];
@@ -22,8 +23,8 @@ static double D1[MAX_INPUT * MAX_HIDDEN];
 static double D2[MAX_HIDDEN * MAX_INPUT];
 static double DB1[MAX_HIDDEN];
 static double DB2[MAX_INPUT];
-static double Zn[sample * MAX_HIDDEN];
-static double Zy[sample * MAX_INPUT];
+static double Zn[MAX_SAMPLE * MAX_HIDDEN];
+static double Zy[MAX_SAMPLE * MAX_INPUT];
 
 static void flatten_1(int n)
 {
@@ -107,7 +108,7 @@ static void save_stage_results(void)
     FILE *fp;
 
     /* 順伝播して z, y を記録 */
-    for(int n = 0; n < sample; n++){
+    for(int n = 0; n < sample_n; n++){
         flatten_1(n);
         dense_forward();
         for(int i = 0; i < hidden_n; i++)
@@ -118,14 +119,14 @@ static void save_stage_results(void)
 
     snprintf(fname, sizeof(fname), "%d_%d_z.dat", input_n, hidden_n);
     fp = fopen(fname, "w");
-    for(int s = 0; s < sample; s++)
+    for(int s = 0; s < sample_n; s++)
         for(int j = 0; j < hidden_n; j++)
             fprintf(fp, "%d %d %f\n", s, j, Zn[s * hidden_n + j]);
     fclose(fp);
 
     snprintf(fname, sizeof(fname), "%d_%d_y.dat", input_n, hidden_n);
     fp = fopen(fname, "w");
-    for(int s = 0; s < sample; s++)
+    for(int s = 0; s < sample_n; s++)
         for(int j = 0; j < input_n; j++)
             fprintf(fp, "%d %d %f\n", s, j, Zy[s * input_n + j]);
     fclose(fp);
@@ -133,7 +134,7 @@ static void save_stage_results(void)
     /* サンプルごとの個別ファイル */
     int y_width = (int)round(sqrt((double)input_n));
 
-    for(int s = 0; s < sample; s++){
+    for(int s = 0; s < sample_n; s++){
         /* z: 潜在空間 */
         snprintf(fname, sizeof(fname), "%d_%d_z_s%d.dat", input_n, hidden_n, s);
         fp = fopen(fname, "w");
@@ -162,6 +163,13 @@ int main(void)
 
     printf("入力ファイル名: ");
     scanf("%s", infile);
+    printf("サンプル数: ");
+    scanf("%d", &sample_n);
+    if(sample_n > MAX_SAMPLE){
+        fprintf(stderr, "サンプル数 %d が最大値 %d を超えています\n",
+                sample_n, MAX_SAMPLE);
+        return 1;
+    }
     printf("階層数: ");
     scanf("%d", &num_layers);
     if(num_layers < 2 || num_layers > MAX_LAYERS){
@@ -199,14 +207,14 @@ int main(void)
         int s_r, yr, xr; double v;
         while(fscanf(fp, "%d %d %d %lf", &s_r, &yr, &xr, &v) == 4){
             int idx = yr * width + xr;
-            if(s_r >= 0 && s_r < sample && idx >= 0 && idx < input_n)
+            if(s_r >= 0 && s_r < sample_n && idx >= 0 && idx < input_n)
                 X_data[s_r * input_n + idx] = v;
         }
     } else {
         /* 3列形式: s idx val */
         int s_r, idx_r; double v;
         while(fscanf(fp, "%d %d %lf", &s_r, &idx_r, &v) == 3)
-            if(s_r >= 0 && s_r < sample && idx_r >= 0 && idx_r < input_n)
+            if(s_r >= 0 && s_r < sample_n && idx_r >= 0 && idx_r < input_n)
                 X_data[s_r * input_n + idx_r] = v;
     }
     fclose(fp);
@@ -229,9 +237,9 @@ int main(void)
 
         /* 次のステージがあれば、z を X_data にコピー */
         if(stage + 2 < num_layers){
-            for(int i = 0; i < sample * MAX_INPUT; i++)
+            for(int i = 0; i < sample_n * MAX_INPUT; i++)
                 X_data[i] = 0.0;
-            for(int s = 0; s < sample; s++)
+            for(int s = 0; s < sample_n; s++)
                 for(int j = 0; j < hidden_n; j++)
                     X_data[s * hidden_n + j] = Zn[s * hidden_n + j];
         }
