@@ -248,7 +248,37 @@ int main(void)
                         x, y, X[n * (m1 / 2)][y][x][0]);
         fclose(fp);
     }
-    printf("X_input{0-%d}.dat saved\n\n", sample1 - 1);
+    printf("X_input{0-%d}.dat saved\n", sample1 - 1);
+
+    /* サンプル×バリエーションごとの個別ファイル（学習データ） */
+    for (int n = 0; n < sample1; n++) {
+        for (int i = 0; i < m1 / 2; i++) {
+            sprintf(fname, "X_study_s%d_v%d.dat", n, i);
+            fp = fopen(fname, "w");
+            if (!fp) continue;
+            for (int y = 0; y < ih; y++)
+                for (int x = 0; x < iw; x++)
+                    fprintf(fp, "%d %d %f\n",
+                            x, y, X[n * (m1 / 2) + i][y][x][0]);
+            fclose(fp);
+        }
+    }
+    printf("X_study_s{0-%d}_v{0-%d}.dat saved\n", sample1 - 1, m1 / 2 - 1);
+
+    /* サンプル×バリエーションごとの個別ファイル（未学習データ） */
+    for (int n = 0; n < sample1; n++) {
+        for (int i = 0; i < m1 / 2; i++) {
+            sprintf(fname, "X_unseen_s%d_v%d.dat", n, i);
+            fp = fopen(fname, "w");
+            if (!fp) continue;
+            for (int y = 0; y < ih; y++)
+                for (int x = 0; x < iw; x++)
+                    fprintf(fp, "%d %d %f\n",
+                            x, y, X1[n * (m1 / 2) + i][y][x][0]);
+            fclose(fp);
+        }
+    }
+    printf("X_unseen_s{0-%d}_v{0-%d}.dat saved\n\n", sample1 - 1, m1 / 2 - 1);
 
     printf("hae との接続:\n");
     printf("  入力ファイル名: X_study.dat\n");
