@@ -124,13 +124,13 @@ int main(void)
         /* 最終試行: 入力・復元画像をプロット */
         if (t == TRIALS - 1) {
             run("gnuplot plot_study.pl");
-            printf("  -> X_study_images.eps を出力\n");
+            printf("  -> X_study_s*_v*.eps を出力 (25枚)\n");
             run("gnuplot plot_unseen.pl");
-            printf("  -> X_unseen_images.eps を出力\n");
+            printf("  -> X_unseen_s*_v*.eps を出力 (25枚)\n");
             run("gnuplot plot_y_study.pl");
-            printf("  -> y_study_images.eps を出力\n");
+            printf("  -> y_study_s*.eps を出力 (25枚)\n");
             run("gnuplot plot_y_unseen.pl");
-            printf("  -> y_unseen_images.eps を出力\n");
+            printf("  -> y_unseen_s*.eps を出力 (25枚)\n");
         }
 
         /* 未学習データの評価 */
@@ -165,10 +165,10 @@ int main(void)
     /* 画像ファイル (EPS) を results/images/ へ移動 */
     run("mv -f z_scatter_pretrain.eps   results/images/ 2>/dev/null");
     run("mv -f z_scatter_inference.eps  results/images/ 2>/dev/null");
-    run("mv -f X_study_images.eps       results/images/ 2>/dev/null");
-    run("mv -f X_unseen_images.eps      results/images/ 2>/dev/null");
-    run("mv -f y_study_images.eps       results/images/ 2>/dev/null");
-    run("mv -f y_unseen_images.eps      results/images/ 2>/dev/null");
+    run("mv -f X_study_s*.eps           results/images/ 2>/dev/null");
+    run("mv -f X_unseen_s*.eps          results/images/ 2>/dev/null");
+    run("mv -f y_study_s*.eps           results/images/ 2>/dev/null");
+    run("mv -f y_unseen_s*.eps          results/images/ 2>/dev/null");
 
     /* 評価データファイルを results/data/ へ移動 */
     run("mv -f eval_study_sse.dat       results/data/ 2>/dev/null");
@@ -181,13 +181,13 @@ int main(void)
     run("mv -f eval_unseen_acc_avg.dat  results/data/ 2>/dev/null");
 
     printf("=== 実験完了 ===\n");
-    printf("results/images/ : 画像ファイル (EPS)\n");
-    printf("  z_scatter_pretrain.eps   - 事前学習後の潜在空間\n");
-    printf("  z_scatter_inference.eps  - 推論後の潜在空間\n");
-    printf("  X_study_images.eps       - 学習用入力画像\n");
-    printf("  X_unseen_images.eps      - 未学習入力画像\n");
-    printf("  y_study_images.eps       - 学習データ復元画像\n");
-    printf("  y_unseen_images.eps      - 未学習データ復元画像\n");
+    printf("results/images/ : 画像ファイル (EPS) - サンプルごとに個別出力\n");
+    printf("  z_scatter_pretrain.eps      - 事前学習後の潜在空間\n");
+    printf("  z_scatter_inference.eps     - 推論後の潜在空間\n");
+    printf("  X_study_s{n}_v{v}.eps       - 学習用入力画像 (25枚)\n");
+    printf("  X_unseen_s{n}_v{v}.eps      - 未学習入力画像 (25枚)\n");
+    printf("  y_study_s{n}.eps            - 学習データ復元画像 (25枚)\n");
+    printf("  y_unseen_s{n}.eps           - 未学習データ復元画像 (25枚)\n");
     printf("results/data/   : 評価データ\n");
     printf("  eval_*_sse.dat / eval_*_acc.dat : 各試行の値\n");
     printf("  *_avg.dat : %d回平均\n", TRIALS);
