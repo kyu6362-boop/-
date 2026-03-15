@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/stat.h>
 
 #define TRIALS 10
 
@@ -155,12 +156,41 @@ int main(void)
     save_avg("eval_unseen_sse_avg.dat",  unseen_sse, TRIALS);
     save_avg("eval_unseen_acc_avg.dat",  unseen_acc, TRIALS);
 
+    /* 結果ファイルをディレクトリに整理 */
+    printf("=== 結果ファイルを整理 ===\n");
+    mkdir("results",        0755);
+    mkdir("results/images", 0755);
+    mkdir("results/data",   0755);
+
+    /* 画像ファイル (EPS) を results/images/ へ移動 */
+    run("mv -f z_scatter_pretrain.eps   results/images/ 2>/dev/null");
+    run("mv -f z_scatter_inference.eps  results/images/ 2>/dev/null");
+    run("mv -f X_study_images.eps       results/images/ 2>/dev/null");
+    run("mv -f X_unseen_images.eps      results/images/ 2>/dev/null");
+    run("mv -f y_study_images.eps       results/images/ 2>/dev/null");
+    run("mv -f y_unseen_images.eps      results/images/ 2>/dev/null");
+
+    /* 評価データファイルを results/data/ へ移動 */
+    run("mv -f eval_study_sse.dat       results/data/ 2>/dev/null");
+    run("mv -f eval_study_acc.dat       results/data/ 2>/dev/null");
+    run("mv -f eval_unseen_sse.dat      results/data/ 2>/dev/null");
+    run("mv -f eval_unseen_acc.dat      results/data/ 2>/dev/null");
+    run("mv -f eval_study_sse_avg.dat   results/data/ 2>/dev/null");
+    run("mv -f eval_study_acc_avg.dat   results/data/ 2>/dev/null");
+    run("mv -f eval_unseen_sse_avg.dat  results/data/ 2>/dev/null");
+    run("mv -f eval_unseen_acc_avg.dat  results/data/ 2>/dev/null");
+
     printf("=== 実験完了 ===\n");
-    printf("eval_study_sse.dat  / eval_study_acc.dat  : 学習データ各試行\n");
-    printf("eval_unseen_sse.dat / eval_unseen_acc.dat : 未学習データ各試行\n");
-    printf("*_avg.dat : それぞれの%d回平均\n", TRIALS);
-    printf("study_256_64_y.dat  : 最終試行の学習データ復元結果\n");
-    printf("unseen_256_64_y.dat : 最終試行の未学習データ復元結果\n");
+    printf("results/images/ : 画像ファイル (EPS)\n");
+    printf("  z_scatter_pretrain.eps   - 事前学習後の潜在空間\n");
+    printf("  z_scatter_inference.eps  - 推論後の潜在空間\n");
+    printf("  X_study_images.eps       - 学習用入力画像\n");
+    printf("  X_unseen_images.eps      - 未学習入力画像\n");
+    printf("  y_study_images.eps       - 学習データ復元画像\n");
+    printf("  y_unseen_images.eps      - 未学習データ復元画像\n");
+    printf("results/data/   : 評価データ\n");
+    printf("  eval_*_sse.dat / eval_*_acc.dat : 各試行の値\n");
+    printf("  *_avg.dat : %d回平均\n", TRIALS);
 
     return 0;
 }
