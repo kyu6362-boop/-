@@ -170,6 +170,16 @@ int main(void)
     run("mv -f y_study_s[0-9]*.eps     results/images/ 2>/dev/null");
     run("mv -f y_unseen_s[0-9]*.eps    results/images/ 2>/dev/null");
 
+    /* 推論中間データを results/data/ へ移動 */
+    run("mv -f study_*_z.dat            results/data/ 2>/dev/null");
+    run("mv -f study_*_y.dat            results/data/ 2>/dev/null");
+    run("mv -f study_*_z_s*.dat         results/data/ 2>/dev/null");
+    run("mv -f study_*_y_s*.dat         results/data/ 2>/dev/null");
+    run("mv -f unseen_*_z.dat           results/data/ 2>/dev/null");
+    run("mv -f unseen_*_y.dat           results/data/ 2>/dev/null");
+    run("mv -f unseen_*_z_s*.dat        results/data/ 2>/dev/null");
+    run("mv -f unseen_*_y_s*.dat        results/data/ 2>/dev/null");
+
     /* 評価データファイルを results/data/ へ移動 */
     run("mv -f eval_study_sse.dat       results/data/ 2>/dev/null");
     run("mv -f eval_study_acc.dat       results/data/ 2>/dev/null");
