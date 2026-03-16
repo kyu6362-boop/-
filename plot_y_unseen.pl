@@ -1,13 +1,13 @@
 # 未学習データの出力 y の2次元画像表示（サンプルごとに個別EPS出力）
 #
 # 使い方:
-#   gnuplot plot_y_unseen.pl
+#   gnuplot -e "yfile='unseen_256_64_y.dat'; input_n=256; hidden_n=64; num_samples=25" plot_y_unseen.pl
 
-# --- 設定 ---
-yfile       = "unseen_256_64_y.dat"  # 未学習データの出力yファイル (s idx value)
-input_n     = 256   # 入力層サイズ
-hidden_n    = 64    # 中間層サイズ
-num_samples = 25    # サンプル数
+# --- 設定 (run_experiment.c から -e で上書きされる) ---
+if (!exists("yfile"))       yfile       = "unseen_256_64_y.dat"
+if (!exists("input_n"))     input_n     = 256
+if (!exists("hidden_n"))    hidden_n    = 64
+if (!exists("num_samples")) num_samples = 25
 
 width  = int(sqrt(input_n + 0.5))
 height = int(sqrt(input_n + 0.5))

@@ -4,11 +4,12 @@
 # z[0] を x 座標、z[1] を y 座標として全サンプルを散布図にプロットする。
 #
 # 使い方:
-#   gnuplot plot_z.pl
+#   gnuplot -e "zfile='study_64_2_z.dat'; outfile='z_scatter.eps'; group_size=5" plot_z.pl
 
-# --- 設定 ---
-zfile   = "study_64_2_z.dat"  # z データファイル (sample z_idx value)
-outfile = "z_scatter.eps"  # 出力画像ファイル
+# --- 設定 (run_experiment.c から -e で上書きされる) ---
+if (!exists("zfile"))      zfile      = "study_64_2_z.dat"
+if (!exists("outfile"))    outfile    = "z_scatter.eps"
+if (!exists("group_size")) group_size = 5
 
 # --- 出力設定 ---
 set terminal postscript eps enhanced color font "Arial,16"
@@ -19,8 +20,6 @@ set xlabel "z[0]"
 set ylabel "z[1]"
 set size ratio 1
 set grid
-
-group_size = 5  # グループあたりのサンプル数
 
 # z_idx=0 の行で x を取得、z_idx=1 の行で y を取得し、1行にまとめる
 # 出力: sample x y group

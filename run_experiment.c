@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <math.h>
 #include <sys/stat.h>
 
 #define TRIALS 10
@@ -20,9 +22,9 @@
 /* 評価パラメータ */
 #define EVAL_STUDY_X  "X_study.dat"
 #define EVAL_UNSEEN_X "X_unseen.dat"
-#define EVAL_Y_STUDY  "study_256_64_y.dat"
-#define EVAL_Y_UNSEEN "unseen_256_64_y.dat"
 #define NUM_SAMPLES   25
+
+#define MAX_LAYERS 16
 
 static int run(const char *cmd)
 {
@@ -61,11 +63,66 @@ static void save_avg(const char *path, double *list, int n)
     fclose(fp);
 }
 
+/* LAYER_SIZES 文字列をパースして配列に格納 */
+static int parse_layers(const char *str, int *layers, int num_layers)
+{
+    const char *s = str;
+    for (int i = 0; i < num_layers; i++) {
+        layers[i] = atoi(s);
+        while (*s && *s != ' ') s++;
+        while (*s == ' ') s++;
+    }
+    return 0;
+}
+
+/* 各層のz画像を gnuplot で生成するヘルパー (prefix: "z_pretrain", "z_study", "z_unseen") */
+static void plot_z_images(const char *prefix, const char *file_prefix,
+                          int *layers, int num_layers, int num_samples)
+{
+    char cmd[1024];
+    for (int i = 0; i < num_layers - 1; i++) {
+        /* zfile: file_prefix が空なら "{in}_{out}_z.dat"、あれば "{file_prefix}_{in}_{out}_z.dat" */
+        char zfile[256];
+        if (file_prefix[0] == '\0')
+            snprintf(zfile, sizeof(zfile), "%d_%d_z.dat", layers[i], layers[i+1]);
+        else
+            snprintf(zfile, sizeof(zfile), "%s_%d_%d_z.dat", file_prefix, layers[i], layers[i+1]);
+
+        int w = (int)sqrt((double)layers[i+1] + 0.5);
+        int h = (layers[i+1] + w - 1) / w;
+
+        snprintf(cmd, sizeof(cmd),
+            "gnuplot -e \"zfile='%s'; hidden_n=%d; num_samples=%d; prefix='%s_%d_%d'\" plot_z_img.pl",
+            zfile, layers[i+1], num_samples, prefix, layers[i], layers[i+1]);
+        run(cmd);
+        printf("  -> %s_%d_%d_s{0..%d}.eps を出力 (%d枚, %dx%d)\n",
+               prefix, layers[i], layers[i+1], num_samples - 1, num_samples, w, h);
+    }
+}
+
 int main(void)
 {
     char cmd[1024];
     double study_sse[TRIALS],  study_acc[TRIALS];
     double unseen_sse[TRIALS], unseen_acc[TRIALS];
+
+    /* LAYER_SIZES をパースして配列に格納 */
+    int layers[MAX_LAYERS];
+    parse_layers(LAYER_SIZES, layers, NUM_LAYERS);
+
+    /* 評価用yファイル名を動的生成 (第1層ペアの出力) */
+    char eval_y_study[256], eval_y_unseen[256];
+    snprintf(eval_y_study,  sizeof(eval_y_study),  "study_%d_%d_y.dat",  layers[0], layers[1]);
+    snprintf(eval_y_unseen, sizeof(eval_y_unseen), "unseen_%d_%d_y.dat", layers[0], layers[1]);
+
+    /* 最終層ペアのzファイル名 (散布図用) */
+    char last_zfile[256], study_last_zfile[256];
+    snprintf(last_zfile, sizeof(last_zfile),
+             "%d_%d_z.dat", layers[NUM_LAYERS-2], layers[NUM_LAYERS-1]);
+    snprintf(study_last_zfile, sizeof(study_last_zfile),
+             "study_%d_%d_z.dat", layers[NUM_LAYERS-2], layers[NUM_LAYERS-1]);
+
+    int plot_variations = NUM_SAMPLES / BASE_PATTERNS;
 
     printf("=== データ生成 ===\n");
 
@@ -77,6 +134,10 @@ int main(void)
 
     printf("\n=== 実験開始: %d 回繰り返し（データ固定・初期値のみ変更） ===\n\n",
            TRIALS);
+    printf("  階層構成: ");
+    for (int i = 0; i < NUM_LAYERS; i++)
+        printf("%s%d", i ? " -> " : "", layers[i]);
+    printf(" (%dステージ)\n\n", NUM_LAYERS - 1);
 
     for (int t = 0; t < TRIALS; t++) {
         printf("===== Trial %d / %d =====\n", t + 1, TRIALS);
@@ -89,14 +150,14 @@ int main(void)
 
         /* 最終試行: 事前学習後の潜在空間をプロット */
         if (t == TRIALS - 1) {
-            run("gnuplot -e \"zfile='64_2_z.dat'; outfile='z_scatter_pretrain.eps'\" plot_z.pl");
+            snprintf(cmd, sizeof(cmd),
+                "gnuplot -e \"zfile='%s'; outfile='z_scatter_pretrain.eps'; group_size=%d\" plot_z.pl",
+                last_zfile, plot_variations);
+            run(cmd);
             printf("  -> z_scatter_pretrain.eps を出力\n");
 
             /* 事前学習後: 各層の潜在空間zを2D画像として可視化 */
-            run("gnuplot -e \"zfile='256_64_z.dat'; hidden_n=64; num_samples=25; prefix='z_pretrain_256_64'\" plot_z_img.pl");
-            printf("  -> z_pretrain_256_64_s{0..24}.eps を出力 (25枚)\n");
-            run("gnuplot -e \"zfile='64_2_z.dat'; hidden_n=2; num_samples=25; prefix='z_pretrain_64_2'\" plot_z_img.pl");
-            printf("  -> z_pretrain_64_2_s{0..24}.eps を出力 (25枚)\n");
+            plot_z_images("z_pretrain", "", layers, NUM_LAYERS, NUM_SAMPLES);
         }
 
         /* 学習データで推論 (プレフィックス: study) */
@@ -107,20 +168,20 @@ int main(void)
 
         /* 最終試行: 推論後の潜在空間をプロット */
         if (t == TRIALS - 1) {
-            run("gnuplot -e \"zfile='study_64_2_z.dat'; outfile='z_scatter_inference.eps'\" plot_z.pl");
+            snprintf(cmd, sizeof(cmd),
+                "gnuplot -e \"zfile='%s'; outfile='z_scatter_inference.eps'; group_size=%d\" plot_z.pl",
+                study_last_zfile, plot_variations);
+            run(cmd);
             printf("  -> z_scatter_inference.eps を出力\n");
 
             /* study推論後: 各層の潜在空間zを2D画像として可視化 */
-            run("gnuplot -e \"zfile='study_256_64_z.dat'; hidden_n=64; num_samples=25; prefix='z_study_256_64'\" plot_z_img.pl");
-            printf("  -> z_study_256_64_s{0..24}.eps を出力 (25枚)\n");
-            run("gnuplot -e \"zfile='study_64_2_z.dat'; hidden_n=2; num_samples=25; prefix='z_study_64_2'\" plot_z_img.pl");
-            printf("  -> z_study_64_2_s{0..24}.eps を出力 (25枚)\n");
+            plot_z_images("z_study", "study", layers, NUM_LAYERS, NUM_SAMPLES);
         }
 
         /* 学習データの評価 */
         snprintf(cmd, sizeof(cmd),
             "echo '%d\n%d\n%d\n%s\n%s' | ./hierarchical_eval",
-            IMG_H, IMG_W, NUM_SAMPLES, EVAL_STUDY_X, EVAL_Y_STUDY);
+            IMG_H, IMG_W, NUM_SAMPLES, EVAL_STUDY_X, eval_y_study);
         if (run(cmd)) return 1;
 
         study_sse[t] = read_value("eval_sse.dat");
@@ -136,25 +197,37 @@ int main(void)
         /* 最終試行: 入力・復元画像をプロット */
         if (t == TRIALS - 1) {
             /* unseen推論後: 各層の潜在空間zを2D画像として可視化 */
-            run("gnuplot -e \"zfile='unseen_256_64_z.dat'; hidden_n=64; num_samples=25; prefix='z_unseen_256_64'\" plot_z_img.pl");
-            printf("  -> z_unseen_256_64_s{0..24}.eps を出力 (25枚)\n");
-            run("gnuplot -e \"zfile='unseen_64_2_z.dat'; hidden_n=2; num_samples=25; prefix='z_unseen_64_2'\" plot_z_img.pl");
-            printf("  -> z_unseen_64_2_s{0..24}.eps を出力 (25枚)\n");
+            plot_z_images("z_unseen", "unseen", layers, NUM_LAYERS, NUM_SAMPLES);
 
-            run("gnuplot plot_study.pl");
-            printf("  -> X_study_s{0..24}.eps を出力 (25枚)\n");
-            run("gnuplot plot_unseen.pl");
-            printf("  -> X_unseen_s{0..24}.eps を出力 (25枚)\n");
-            run("gnuplot plot_y_study.pl");
-            printf("  -> y_study_s*.eps を出力 (25枚)\n");
-            run("gnuplot plot_y_unseen.pl");
-            printf("  -> y_unseen_s*.eps を出力 (25枚)\n");
+            snprintf(cmd, sizeof(cmd),
+                "gnuplot -e \"sample1=%d; variations=%d; ih=%d; iw=%d\" plot_study.pl",
+                BASE_PATTERNS, plot_variations, IMG_H, IMG_W);
+            run(cmd);
+            printf("  -> X_study_s{0..%d}.eps を出力 (%d枚)\n", NUM_SAMPLES - 1, NUM_SAMPLES);
+
+            snprintf(cmd, sizeof(cmd),
+                "gnuplot -e \"sample1=%d; variations=%d; ih=%d; iw=%d\" plot_unseen.pl",
+                BASE_PATTERNS, plot_variations, IMG_H, IMG_W);
+            run(cmd);
+            printf("  -> X_unseen_s{0..%d}.eps を出力 (%d枚)\n", NUM_SAMPLES - 1, NUM_SAMPLES);
+
+            snprintf(cmd, sizeof(cmd),
+                "gnuplot -e \"yfile='%s'; input_n=%d; hidden_n=%d; num_samples=%d\" plot_y_study.pl",
+                eval_y_study, layers[0], layers[1], NUM_SAMPLES);
+            run(cmd);
+            printf("  -> y_study_s{0..%d}.eps を出力 (%d枚)\n", NUM_SAMPLES - 1, NUM_SAMPLES);
+
+            snprintf(cmd, sizeof(cmd),
+                "gnuplot -e \"yfile='%s'; input_n=%d; hidden_n=%d; num_samples=%d\" plot_y_unseen.pl",
+                eval_y_unseen, layers[0], layers[1], NUM_SAMPLES);
+            run(cmd);
+            printf("  -> y_unseen_s{0..%d}.eps を出力 (%d枚)\n", NUM_SAMPLES - 1, NUM_SAMPLES);
         }
 
         /* 未学習データの評価 */
         snprintf(cmd, sizeof(cmd),
             "echo '%d\n%d\n%d\n%s\n%s' | ./hierarchical_eval",
-            IMG_H, IMG_W, NUM_SAMPLES, EVAL_UNSEEN_X, EVAL_Y_UNSEEN);
+            IMG_H, IMG_W, NUM_SAMPLES, EVAL_UNSEEN_X, eval_y_unseen);
         if (run(cmd)) return 1;
 
         unseen_sse[t] = read_value("eval_sse.dat");
@@ -186,12 +259,9 @@ int main(void)
     /* 潜在空間z画像 -> results/images/z/ */
     run("mv -f z_scatter_pretrain.eps   results/images/z/ 2>/dev/null");
     run("mv -f z_scatter_inference.eps  results/images/z/ 2>/dev/null");
-    run("mv -f z_pretrain_256_64_s[0-9]*.eps  results/images/z/ 2>/dev/null");
-    run("mv -f z_pretrain_64_2_s[0-9]*.eps    results/images/z/ 2>/dev/null");
-    run("mv -f z_study_256_64_s[0-9]*.eps     results/images/z/ 2>/dev/null");
-    run("mv -f z_study_64_2_s[0-9]*.eps       results/images/z/ 2>/dev/null");
-    run("mv -f z_unseen_256_64_s[0-9]*.eps    results/images/z/ 2>/dev/null");
-    run("mv -f z_unseen_64_2_s[0-9]*.eps      results/images/z/ 2>/dev/null");
+    run("mv -f z_pretrain_*_s[0-9]*.eps results/images/z/ 2>/dev/null");
+    run("mv -f z_study_*_s[0-9]*.eps    results/images/z/ 2>/dev/null");
+    run("mv -f z_unseen_*_s[0-9]*.eps   results/images/z/ 2>/dev/null");
 
     /* 入力画像 -> results/images/input/ */
     run("mv -f X_study_s[0-9]*.eps     results/images/input/ 2>/dev/null");
@@ -221,23 +291,33 @@ int main(void)
     run("mv -f eval_unseen_sse_avg.dat  results/data/ 2>/dev/null");
     run("mv -f eval_unseen_acc_avg.dat  results/data/ 2>/dev/null");
 
+    /* サマリー表示 */
     printf("=== 実験完了 ===\n");
+    printf("  階層構成: ");
+    for (int i = 0; i < NUM_LAYERS; i++)
+        printf("%s%d", i ? " -> " : "", layers[i]);
+    printf(" (%dステージ)\n\n", NUM_LAYERS - 1);
+
     printf("results/images/z/      : 潜在空間z画像\n");
-    printf("  z_scatter_pretrain.eps          - 事前学習後の潜在空間散布図\n");
-    printf("  z_scatter_inference.eps         - 推論後の潜在空間散布図\n");
-    printf("  z_pretrain_256_64_s{n}.eps      - 事前学習z 第1層 8x8 (25枚)\n");
-    printf("  z_pretrain_64_2_s{n}.eps        - 事前学習z 第2層 1x2 (25枚)\n");
-    printf("  z_study_256_64_s{n}.eps         - 学習推論z 第1層 8x8 (25枚)\n");
-    printf("  z_study_64_2_s{n}.eps           - 学習推論z 第2層 1x2 (25枚)\n");
-    printf("  z_unseen_256_64_s{n}.eps        - 未学習推論z 第1層 8x8 (25枚)\n");
-    printf("  z_unseen_64_2_s{n}.eps          - 未学習推論z 第2層 1x2 (25枚)\n");
+    printf("  z_scatter_pretrain.eps  - 事前学習後の潜在空間散布図\n");
+    printf("  z_scatter_inference.eps - 推論後の潜在空間散布図\n");
+    for (int i = 0; i < NUM_LAYERS - 1; i++) {
+        int w = (int)sqrt((double)layers[i+1] + 0.5);
+        int h = (layers[i+1] + w - 1) / w;
+        printf("  z_pretrain_%d_%d_s{n}.eps  - 事前学習z 第%d層 %dx%d (%d枚)\n",
+               layers[i], layers[i+1], i+1, w, h, NUM_SAMPLES);
+        printf("  z_study_%d_%d_s{n}.eps    - 学習推論z 第%d層 %dx%d (%d枚)\n",
+               layers[i], layers[i+1], i+1, w, h, NUM_SAMPLES);
+        printf("  z_unseen_%d_%d_s{n}.eps   - 未学習推論z 第%d層 %dx%d (%d枚)\n",
+               layers[i], layers[i+1], i+1, w, h, NUM_SAMPLES);
+    }
     printf("results/images/input/  : 入力画像\n");
-    printf("  X_study_s{n}.eps                - 学習用入力画像 (25枚)\n");
-    printf("  X_unseen_s{n}.eps               - 未学習入力画像 (25枚)\n");
+    printf("  X_study_s{n}.eps    - 学習用入力画像 (%d枚)\n", NUM_SAMPLES);
+    printf("  X_unseen_s{n}.eps   - 未学習入力画像 (%d枚)\n", NUM_SAMPLES);
     printf("results/images/output/ : 出力(復元)画像\n");
-    printf("  y_study_s{n}.eps                - 学習データ復元画像 (25枚)\n");
-    printf("  y_unseen_s{n}.eps               - 未学習データ復元画像 (25枚)\n");
-    printf("results/data/   : 評価データ\n");
+    printf("  y_study_s{n}.eps    - 学習データ復元画像 (%d枚)\n", NUM_SAMPLES);
+    printf("  y_unseen_s{n}.eps   - 未学習データ復元画像 (%d枚)\n", NUM_SAMPLES);
+    printf("results/data/          : 評価データ\n");
     printf("  eval_*_sse.dat / eval_*_acc.dat : 各試行の値\n");
     printf("  *_avg.dat : %d回平均\n", TRIALS);
 

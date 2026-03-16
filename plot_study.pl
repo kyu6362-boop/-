@@ -1,13 +1,13 @@
 # 学習用入力データ X_study の2次元画像表示（サンプルごとに個別EPS出力）
 #
 # 使い方:
-#   gnuplot plot_study.pl
+#   gnuplot -e "sample1=5; variations=5; ih=16; iw=16" plot_study.pl
 
-# --- 設定 ---
-sample1    = 5    # ベースパターン数
-variations = 5    # バリエーション数 (m1/2)
-ih         = 16   # 画像の高さ
-iw         = 16   # 画像の幅
+# --- 設定 (run_experiment.c から -e で上書きされる) ---
+if (!exists("sample1"))    sample1    = 5    # ベースパターン数
+if (!exists("variations")) variations = 5    # バリエーション数
+if (!exists("ih"))         ih         = 16   # 画像の高さ
+if (!exists("iw"))         iw         = 16   # 画像の幅
 
 set palette defined (0 "white", 1 "black")
 set cbrange [0:1]
