@@ -176,23 +176,30 @@ int main(void)
 
     /* 結果ファイルをディレクトリに整理 */
     printf("=== 結果ファイルを整理 ===\n");
-    mkdir("results",        0755);
-    mkdir("results/images", 0755);
-    mkdir("results/data",   0755);
+    mkdir("results",               0755);
+    mkdir("results/images",        0755);
+    mkdir("results/images/z",      0755);
+    mkdir("results/images/input",  0755);
+    mkdir("results/images/output", 0755);
+    mkdir("results/data",          0755);
 
-    /* 画像ファイル (EPS) を results/images/ へ移動 */
-    run("mv -f z_scatter_pretrain.eps   results/images/ 2>/dev/null");
-    run("mv -f z_scatter_inference.eps  results/images/ 2>/dev/null");
-    run("mv -f z_pretrain_256_64_s[0-9]*.eps  results/images/ 2>/dev/null");
-    run("mv -f z_pretrain_64_2_s[0-9]*.eps    results/images/ 2>/dev/null");
-    run("mv -f z_study_256_64_s[0-9]*.eps     results/images/ 2>/dev/null");
-    run("mv -f z_study_64_2_s[0-9]*.eps       results/images/ 2>/dev/null");
-    run("mv -f z_unseen_256_64_s[0-9]*.eps    results/images/ 2>/dev/null");
-    run("mv -f z_unseen_64_2_s[0-9]*.eps      results/images/ 2>/dev/null");
-    run("mv -f X_study_s[0-9]*.eps      results/images/ 2>/dev/null");
-    run("mv -f X_unseen_s[0-9]*.eps    results/images/ 2>/dev/null");
-    run("mv -f y_study_s[0-9]*.eps     results/images/ 2>/dev/null");
-    run("mv -f y_unseen_s[0-9]*.eps    results/images/ 2>/dev/null");
+    /* 潜在空間z画像 -> results/images/z/ */
+    run("mv -f z_scatter_pretrain.eps   results/images/z/ 2>/dev/null");
+    run("mv -f z_scatter_inference.eps  results/images/z/ 2>/dev/null");
+    run("mv -f z_pretrain_256_64_s[0-9]*.eps  results/images/z/ 2>/dev/null");
+    run("mv -f z_pretrain_64_2_s[0-9]*.eps    results/images/z/ 2>/dev/null");
+    run("mv -f z_study_256_64_s[0-9]*.eps     results/images/z/ 2>/dev/null");
+    run("mv -f z_study_64_2_s[0-9]*.eps       results/images/z/ 2>/dev/null");
+    run("mv -f z_unseen_256_64_s[0-9]*.eps    results/images/z/ 2>/dev/null");
+    run("mv -f z_unseen_64_2_s[0-9]*.eps      results/images/z/ 2>/dev/null");
+
+    /* 入力画像 -> results/images/input/ */
+    run("mv -f X_study_s[0-9]*.eps     results/images/input/ 2>/dev/null");
+    run("mv -f X_unseen_s[0-9]*.eps    results/images/input/ 2>/dev/null");
+
+    /* 出力(復元)画像 -> results/images/output/ */
+    run("mv -f y_study_s[0-9]*.eps     results/images/output/ 2>/dev/null");
+    run("mv -f y_unseen_s[0-9]*.eps    results/images/output/ 2>/dev/null");
 
     /* 推論中間データを results/data/ へ移動 */
     run("mv -f study_*_z.dat            results/data/ 2>/dev/null");
@@ -215,7 +222,7 @@ int main(void)
     run("mv -f eval_unseen_acc_avg.dat  results/data/ 2>/dev/null");
 
     printf("=== 実験完了 ===\n");
-    printf("results/images/ : 画像ファイル (EPS) - サンプルごとに個別出力\n");
+    printf("results/images/z/      : 潜在空間z画像\n");
     printf("  z_scatter_pretrain.eps          - 事前学習後の潜在空間散布図\n");
     printf("  z_scatter_inference.eps         - 推論後の潜在空間散布図\n");
     printf("  z_pretrain_256_64_s{n}.eps      - 事前学習z 第1層 8x8 (25枚)\n");
@@ -224,8 +231,10 @@ int main(void)
     printf("  z_study_64_2_s{n}.eps           - 学習推論z 第2層 1x2 (25枚)\n");
     printf("  z_unseen_256_64_s{n}.eps        - 未学習推論z 第1層 8x8 (25枚)\n");
     printf("  z_unseen_64_2_s{n}.eps          - 未学習推論z 第2層 1x2 (25枚)\n");
+    printf("results/images/input/  : 入力画像\n");
     printf("  X_study_s{n}.eps                - 学習用入力画像 (25枚)\n");
     printf("  X_unseen_s{n}.eps               - 未学習入力画像 (25枚)\n");
+    printf("results/images/output/ : 出力(復元)画像\n");
     printf("  y_study_s{n}.eps                - 学習データ復元画像 (25枚)\n");
     printf("  y_unseen_s{n}.eps               - 未学習データ復元画像 (25枚)\n");
     printf("results/data/   : 評価データ\n");
