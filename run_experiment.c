@@ -132,7 +132,7 @@ int main(void)
 
     /* データ生成（1回だけ、ループ外で固定） */
     snprintf(cmd, sizeof(cmd),
-        "echo '%d\n%d\n%d\n%d\n%d\n%d' | ./hierarchical_datagen",
+        "echo '%d\n%d\n%d\n%d\n%d\n%d' | ./generate2D",
         IMG_H, IMG_W, CHANNELS, BASE_PATTERNS, VARIATIONS, BLOCKS);
     if (run(cmd)) return 1;
 
@@ -148,7 +148,7 @@ int main(void)
 
         /* 事前学習（毎回ランダム初期値で再学習） */
         snprintf(cmd, sizeof(cmd),
-            "echo '%s\n%d\n%d\n%s' | ./hierarchical_autoencoder",
+            "echo '%s\n%d\n%d\n%s' | ./study",
             INPUT_FILE, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
 
@@ -165,7 +165,7 @@ int main(void)
 
         /* 学習データで推論 (プレフィックス: study) */
         snprintf(cmd, sizeof(cmd),
-            "echo '%s\nstudy\n%d\n%d\n%s' | ./hierarchical_inference",
+            "echo '%s\nstudy\n%d\n%d\n%s' | ./play",
             EVAL_STUDY_X, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
 
@@ -182,7 +182,7 @@ int main(void)
 
         /* 学習データの評価 */
         snprintf(cmd, sizeof(cmd),
-            "echo '%d\n%d\n%d\n%s\n%s' | ./hierarchical_eval",
+            "echo '%d\n%d\n%d\n%s\n%s' | ./evaluation",
             IMG_H, IMG_W, NUM_SAMPLES, EVAL_STUDY_X, eval_y_study);
         if (run(cmd)) return 1;
 
@@ -192,7 +192,7 @@ int main(void)
 
         /* 未学習データで推論 (プレフィックス: unseen) */
         snprintf(cmd, sizeof(cmd),
-            "echo '%s\nunseen\n%d\n%d\n%s' | ./hierarchical_inference",
+            "echo '%s\nunseen\n%d\n%d\n%s' | ./play",
             EVAL_UNSEEN_X, NUM_SAMPLES, NUM_LAYERS, LAYER_SIZES);
         if (run(cmd)) return 1;
 
@@ -227,7 +227,7 @@ int main(void)
 
         /* 未学習データの評価 */
         snprintf(cmd, sizeof(cmd),
-            "echo '%d\n%d\n%d\n%s\n%s' | ./hierarchical_eval",
+            "echo '%d\n%d\n%d\n%s\n%s' | ./evaluation",
             IMG_H, IMG_W, NUM_SAMPLES, EVAL_UNSEEN_X, eval_y_unseen);
         if (run(cmd)) return 1;
 
