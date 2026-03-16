@@ -67,7 +67,7 @@ static void dense_forward(void)
 
 static void load_weights(void)
 {
-    char fname[256];
+    char fname[512];
     FILE *fp;
     int idx0, idx1;
     double val;
@@ -105,7 +105,7 @@ static void load_weights(void)
 
 static void save_stage_results(void)
 {
-    char fname[256];
+    char fname[512];
     FILE *fp;
 
     /* 順伝播して z, y を記録 */
