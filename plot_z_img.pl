@@ -4,7 +4,10 @@
 # width x height の2次元にリシェイプしてヒートマップ表示する。
 #
 # 使い方:
-#   gnuplot -e "zfile='256_64_z.dat'; hidden_n=64; num_samples=25; prefix='z_pretrain_256_64'" plot_z_img.pl
+#   gnuplot -e "zfile='256_64_z.dat'; hidden_n=64; num_samples=25; prefix='z_pretrain_256_64'; outdir='results/images/z/'" plot_z_img.pl
+
+# --- デフォルト値 (run_experiment.c から -e で上書きされる) ---
+if (!exists("outdir")) outdir = ""
 
 # --- 次元からリシェイプサイズを計算 ---
 width  = int(sqrt(hidden_n + 0.5))
@@ -17,7 +20,7 @@ unset colorbox
 unset key
 
 do for [s=0:num_samples-1] {
-    outfile = sprintf("%s_s%d.eps", prefix, s)
+    outfile = sprintf("%s%s_s%d.eps", outdir, prefix, s)
     set terminal postscript eps enhanced color font "Arial,10" size 3,3
     set output outfile
     set title sprintf("%s  sample %d  (%dx%d)", prefix, s, width, height) font ",12"

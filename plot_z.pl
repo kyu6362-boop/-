@@ -4,16 +4,17 @@
 # z[0] を x 座標、z[1] を y 座標として全サンプルを散布図にプロットする。
 #
 # 使い方:
-#   gnuplot -e "zfile='study_64_2_z.dat'; outfile='z_scatter.eps'; group_size=5" plot_z.pl
+#   gnuplot -e "zfile='study_64_2_z.dat'; outfile='z_scatter.eps'; group_size=5; outdir='results/images/z/'" plot_z.pl
 
-# --- 設定 (run_experiment.c から -e で上書きされる) ---
+# --- デフォルト値 (run_experiment.c から -e で上書きされる) ---
 if (!exists("zfile"))      zfile      = "study_64_2_z.dat"
 if (!exists("outfile"))    outfile    = "z_scatter.eps"
 if (!exists("group_size")) group_size = 5
+if (!exists("outdir"))     outdir     = ""
 
 # --- 出力設定 ---
 set terminal postscript eps enhanced color font "Arial,16"
-set output outfile
+set output outdir.outfile
 
 set title "Latent Space z  (".zfile.")" font ",14"
 set xlabel "z[0]"
@@ -34,4 +35,4 @@ plot cmd using (int($4)==0 ? $2 : 1/0):3 with points pt 7 ps 1.5 lc rgb "royalbl
      cmd using (int($4)==4 ? $2 : 1/0):3 with points pt 7 ps 1.5 lc rgb "dark-violet"  title "sample 20-24"
 
 set output
-print sprintf("saved: %s", outfile)
+print sprintf("saved: %s%s", outdir, outfile)
