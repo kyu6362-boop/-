@@ -1,8 +1,18 @@
 import './style.css';
-import { Game } from './game';
+import { LeaderSelectScreen } from './ui/LeaderSelect';
+import { BattleScreen } from './ui/BattleScreen';
+import type { LeaderDef } from './types';
 
-const app = document.querySelector<HTMLDivElement>('#app')!;
-const canvas = document.createElement('canvas');
-app.appendChild(canvas);
+const app = document.getElementById('app')!;
 
-new Game(canvas);
+function startLeaderSelect() {
+  app.innerHTML = '';
+  new LeaderSelectScreen(app, (leader: LeaderDef) => startBattle(leader));
+}
+
+function startBattle(leader: LeaderDef) {
+  app.innerHTML = '';
+  new BattleScreen(app, leader, () => startLeaderSelect());
+}
+
+startLeaderSelect();
